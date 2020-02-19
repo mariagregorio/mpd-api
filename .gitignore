@@ -105,4 +105,4 @@ dist
 
 .idea
 
-config/
+config/db_config.js
