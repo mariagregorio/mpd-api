@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const Joi = require('joi');
 const Plant = require('../models/plant');
 const logger = require('../utils/logger');
+const auth = require('../middleware/auth');
 
-router.get('/', (req, res) => {
+router.get('/', auth, (req, res) => {
     Plant.find()
         .then(data => {
             res.send(data);
@@ -15,7 +15,7 @@ router.get('/', (req, res) => {
         })
 });
 
-router.get('/:id', (req, res) => {
+router.get('/:id', auth, (req, res) => {
     Plant.findOne({ _id: req.params.id})
         .then(data => {
             if (data) {
@@ -30,15 +30,7 @@ router.get('/:id', (req, res) => {
         });
 });
 
-router.post('/', (req, res) => {
-    const result = validatePlant(req.body);
-
-    if (result.error) {
-        let errorMessages = [];
-        result.error.details.forEach(el => errorMessages.push(el.message));
-        return res.status(400).send(errorMessages);
-    }
-
+router.post('/', auth, async (req, res) => {
     const plant = new Plant({
         name: req.body.name,
         species: req.body.species,
@@ -48,7 +40,7 @@ router.post('/', (req, res) => {
         date_created: new Date(),
         log_entries: req.body.log_entries,
         environment: req.body.environment,
-        user: req.body.user,
+        user: req.user._id, // authenticated user, set on the auth middleware
         mother: req.body.mother,
         clone: req.body.clone
     });
@@ -58,18 +50,12 @@ router.post('/', (req, res) => {
             res.send(data);
         })
         .catch(err => {
-            logger.error(err);
+            logger.error(err.message);
             res.status(500).send(err.message);
         })
 });
 
-router.put('/:id', (req, res) => {
-    const update = validatePlant(req.body);
-    if (update.error) {
-        let errorMessages = [];
-        update.error.details.forEach(el => errorMessages.push(el.message));
-        return res.status(400).send(errorMessages);
-    }
+router.put('/:id', auth, (req, res) => {
     Plant.findByIdAndUpdate(req.params.id, req.body, {new: true})
         .then(plant => {
             res.send(plant);
@@ -80,7 +66,7 @@ router.put('/:id', (req, res) => {
         })
 });
 
-router.delete('/:id', (req, res) => {
+router.delete('/:id', auth, (req, res) => {
     Plant.findByIdAndDelete(req.params.id)
         .then(plant => {
             res.send(plant);
@@ -90,15 +76,5 @@ router.delete('/:id', (req, res) => {
             res.status(500).send(err.message);
         })
 });
-
-// TODO finish validations and move to different module. Need to validate environment and user as required, among others
-const validatePlant = (reqBody) => {
-    const schema = {
-        name: Joi.string().min(3).required(),
-        strain_type: Joi.any().valid('Feminized', 'Autoflowering', 'None').required(),
-        species: Joi.any().valid('Indica', 'Sativa', 'Hybrid').required()
-    };
-    return Joi.validate(reqBody, schema,{ abortEarly: false });
-};
 
 module.exports = router;

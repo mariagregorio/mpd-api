@@ -2,16 +2,13 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/user');
 const logger = require('../utils/logger');
+const _ = require('lodash');
+const bcrypt = require('bcrypt');
+const auth = require('../middleware/auth');
 
-router.get('/', (req, res) => {
-    User.find()
-        .then(data => {
-            res.send(data);
-        })
-        .catch(err => {
-            logger.error(err);
-            res.end();
-        })
+router.get('/current', auth, async (req, res) => {
+    const user = await User.findById(req.user._id).select('-password');
+    res.send(user);
 });
 
 router.post('/', async (req, res) => {
@@ -24,9 +21,13 @@ router.post('/', async (req, res) => {
         return res.status(400).send('User name already taken');
     }
 
+    // hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPass = await bcrypt.hash(req.body.password, salt);
+
     const user = new User({
         name: req.body.name,
-        password: req.body.password,
+        password: hashedPass,
         email: req.body.email,
         avatar: req.body.avatar,
         date_created: new Date()
@@ -34,7 +35,7 @@ router.post('/', async (req, res) => {
 
     User.create(user)
         .then(data => {
-            res.send(data);
+            res.send(_.pick(data, ['_id', 'name', 'email', 'avatar']));
         })
         .catch(err => {
             logger.error(err);

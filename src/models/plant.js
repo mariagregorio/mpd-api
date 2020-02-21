@@ -1,16 +1,15 @@
 const mongoose = require('mongoose');
+const lists = require('../utils/lists');
 
 const plantSchema = new mongoose.Schema({
-    // TODO add enum validation for strain, species, etc. Use async validators to get enums from db
     name: {type: String, required: true},
-    species: String,
-    strain: String,
-    strain_type: String,
+    strain: {type: String, enum: lists.strains},
+    strain_type: {type: String, enum: lists.strainType},
     seed_bank: String,
     date_created: {type: Date, default: Date.now},
     log_entries: [String],
     environment: String,
-    user: String,
+    user: {type: String, required: true}, //user id
     mother: Boolean,
     clone: Boolean
 });
