@@ -56,6 +56,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 router.put('/:id', auth, (req, res) => {
+    // TODO if I change a plant's environment, make sure to update the plants list in the environment it comes from
     Plant.findByIdAndUpdate(req.params.id, req.body, {new: true})
         .then(plant => {
             res.send(plant);
